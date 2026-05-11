@@ -1,0 +1,83 @@
+:root {
+  --m-cream: #EFE7D6;
+  --m-cream-2: #E5DAC2;
+  --m-paper: #FAF6EC;
+  --m-paper-2: #F4EFE2;
+  --m-ink: #2A241D;
+  --m-ink-2: #5C5147;
+  --m-ink-3: #8E8175;
+  --m-brass: #A88752;
+  --m-brass-soft: #C7AC7E;
+  --m-line: rgba(42, 36, 29, 0.14);
+  --m-line-soft: rgba(42, 36, 29, 0.06);
+
+  --m-status-new-bg: #E8DDC0;
+  --m-status-new-fg: #6B5527;
+  --m-status-sales-bg: #D7E0CF;
+  --m-status-sales-fg: #3F5634;
+  --m-status-ongoing-bg: #DCC9AB;
+  --m-status-ongoing-fg: #5A3F22;
+  --m-status-snagg-bg: #E5C8B6;
+  --m-status-snagg-fg: #6B3724;
+
+  --m-dot-new: #B89A4F;
+  --m-dot-sales: #6E8C5C;
+  --m-dot-ongoing: #8B6234;
+  --m-dot-snagg: #B06A48;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--m-cream);
+  color: var(--m-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+#app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 36px 48px;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--m-ink);
+  margin: 0;
+  line-height: 1.15;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
