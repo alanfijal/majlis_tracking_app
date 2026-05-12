@@ -30,8 +30,7 @@ const rows = computed(() => {
     const projs = projectsByClient.value.get(c.id) || []
     return {
       ...c,
-      projectCount: projs.length,
-      lifetime: projs.reduce((sum, p) => sum + Number(p.budget || 0), 0)
+      projectCount: projs.length
     }
   })
 
@@ -109,10 +108,9 @@ function selectClient(id) {
       <table>
         <colgroup>
           <col style="width:30%">
-          <col style="width:30%">
+          <col style="width:42%">
           <col style="width:14%">
-          <col style="width:10%">
-          <col style="width:16%">
+          <col style="width:14%">
         </colgroup>
         <thead>
           <tr>
@@ -123,9 +121,6 @@ function selectClient(id) {
             <th>Language</th>
             <th @click="toggleSort('projectCount')" :class="{ sorted: sortKey === 'projectCount' }" style="text-align:right;">
               Projects<span class="sort-ind">{{ sortIndicator('projectCount') }}</span>
-            </th>
-            <th @click="toggleSort('lifetime')" :class="{ sorted: sortKey === 'lifetime' }" style="text-align:right;">
-              Lifetime<span class="sort-ind">{{ sortIndicator('lifetime') }}</span>
             </th>
           </tr>
         </thead>
@@ -139,18 +134,19 @@ function selectClient(id) {
             <td>
               <span class="client-name">{{ c.name }}</span>
             </td>
-            <td class="contact">
-              <span class="email">{{ c.email || '—' }}</span>
-              <span class="phone">{{ c.phone || '' }}</span>
+            <td>
+              <div class="contact">
+                <span class="email">{{ c.email || '—' }}</span>
+                <span class="phone">{{ c.phone || '' }}</span>
+              </div>
             </td>
-            <td class="langs">
+            <td>
               <span v-if="c.language" class="lang-tag">{{ c.language }}</span>
             </td>
             <td class="num">{{ c.projectCount }}</td>
-            <td class="num">{{ fmt.format(c.lifetime) }}</td>
           </tr>
           <tr v-if="!rows.length">
-            <td colspan="5" class="empty">No clients match your search</td>
+            <td colspan="4" class="empty">No clients match your search</td>
           </tr>
         </tbody>
       </table>
@@ -352,13 +348,6 @@ tbody tr.active {
 .contact .phone {
   color: var(--m-ink-3);
   font-size: 12px;
-}
-
-.langs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  white-space: normal;
 }
 
 .lang-tag {

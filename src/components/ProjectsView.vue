@@ -127,6 +127,10 @@ function goNewProject() {
   router.push({ name: 'project-new' })
 }
 
+function openProject(id) {
+  router.push({ name: 'project-detail', params: { id } })
+}
+
 onMounted(() => {
   load()
   window.addEventListener('click', closeStatusMenu)
@@ -206,7 +210,7 @@ onUnmounted(() => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="p in filteredProjects" :key="p.id">
+        <tr v-for="p in filteredProjects" :key="p.id" @click="openProject(p.id)">
           <td>
             <span class="proj-name">{{ p.name }}</span>
             <span class="status-wrap">

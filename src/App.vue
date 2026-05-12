@@ -50,7 +50,7 @@ async function signOut() {
   </main>
 
   <footer v-if="showChrome" class="app-footer">
-    Visual POC · The Majlis project tracker
+    The Majlis project tracker
   </footer>
 </template>
 

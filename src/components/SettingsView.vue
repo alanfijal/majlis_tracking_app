@@ -2,13 +2,6 @@
 import { ref } from 'vue'
 import { languageOptions, currencyOptions, statusOptions } from '../lib/options'
 
-const profile = ref({
-  studioName: 'The Majlis',
-  city: 'Marbella',
-  email: 'studio@themajlis.com',
-  phone: '+34 600 000 000'
-})
-
 const defaults = ref({
   currency: 'EUR',
   language: 'EN',
@@ -23,12 +16,10 @@ const display = ref({
 })
 
 const tabs = [
-  { id: 'profile', label: 'Atelier' },
   { id: 'defaults', label: 'Defaults' },
-  { id: 'display', label: 'Display' },
-  { id: 'about', label: 'About' }
+  { id: 'display', label: 'Display' }
 ]
-const activeTab = ref('profile')
+const activeTab = ref('defaults')
 </script>
 
 <template>
@@ -52,33 +43,8 @@ const activeTab = ref('profile')
     </nav>
 
     <div class="panel">
-      <section v-if="activeTab === 'profile'">
-        <div class="section-eyebrow">01 — Atelier</div>
-        <h3 class="section-title">Your studio</h3>
-        <p class="section-sub">How your atelier shows up across the tracker.</p>
-
-        <div class="grid-2">
-          <div class="field">
-            <label class="field-label">Studio name</label>
-            <input v-model="profile.studioName" class="text-input" />
-          </div>
-          <div class="field">
-            <label class="field-label">City</label>
-            <input v-model="profile.city" class="text-input" />
-          </div>
-          <div class="field">
-            <label class="field-label">Contact email</label>
-            <input v-model="profile.email" type="email" class="text-input" />
-          </div>
-          <div class="field">
-            <label class="field-label">Contact phone</label>
-            <input v-model="profile.phone" class="text-input" />
-          </div>
-        </div>
-      </section>
-
       <section v-if="activeTab === 'defaults'">
-        <div class="section-eyebrow">02 — Defaults</div>
+        <div class="section-eyebrow">01 — Defaults</div>
         <h3 class="section-title">New project defaults</h3>
         <p class="section-sub">Values prefilled when starting a new project.</p>
 
@@ -107,7 +73,7 @@ const activeTab = ref('profile')
       </section>
 
       <section v-if="activeTab === 'display'">
-        <div class="section-eyebrow">03 — Display</div>
+        <div class="section-eyebrow">02 — Display</div>
         <h3 class="section-title">Look &amp; feel</h3>
         <p class="section-sub">How information appears across the workspace.</p>
 
@@ -158,22 +124,6 @@ const activeTab = ref('profile')
             <span class="toggle-knob"></span>
           </button>
         </div>
-      </section>
-
-      <section v-if="activeTab === 'about'">
-        <div class="section-eyebrow">04 — About</div>
-        <h3 class="section-title">The Majlis</h3>
-        <p class="section-sub">Project tracker for the atelier.</p>
-
-        <div class="about-list">
-          <div class="about-row"><span>Version</span><span>0.1.0 · POC</span></div>
-          <div class="about-row"><span>Build</span><span>Vue 3 · Vite</span></div>
-          <div class="about-row"><span>Status</span><span>Visual prototype</span></div>
-        </div>
-
-        <p class="about-note">
-          This workspace is a visual proof of concept. Data resets on each reload.
-        </p>
       </section>
 
       <div class="actions">
@@ -358,40 +308,6 @@ const activeTab = ref('profile')
 
 .toggle.on .toggle-knob {
   left: 18px;
-}
-
-.about-list {
-  margin: 18px 0;
-}
-
-.about-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 9px 0;
-  border-top: 0.5px solid var(--m-line-soft);
-  font-size: 13px;
-}
-
-.about-row:first-child {
-  border-top: none;
-}
-
-.about-row > span:first-child {
-  color: var(--m-ink-3);
-}
-
-.about-row > span:last-child {
-  color: var(--m-ink);
-}
-
-.about-note {
-  margin-top: 18px;
-  font-size: 12px;
-  color: var(--m-ink-3);
-  font-style: italic;
-  padding: 12px 14px;
-  background: var(--m-paper-2);
-  border-radius: var(--radius);
 }
 
 .actions {
