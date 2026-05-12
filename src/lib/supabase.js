@@ -7,4 +7,11 @@ if (!url || !key) {
   throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Check .env.local')
 }
 
-export const supabase = createClient(url, key)
+export const supabase = createClient(url, key, {
+  auth: {
+    flowType: 'pkce',
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
+    persistSession: true,
+  },
+})
