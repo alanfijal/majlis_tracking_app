@@ -1,28 +1,37 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { clients, projects } from '../data.js'
+import { ref, computed, onMounted } from 'vue'
+import { useClients } from '../composables/useClients'
+import { useProjects } from '../composables/useProjects'
+
+const { clients, load: loadClients } = useClients()
+const { projects, load: loadProjects } = useProjects()
 
 const searchQuery = ref('')
 const sortKey = ref('name')
 const sortDir = ref(1)
 const selectedId = ref(null)
 
+onMounted(() => {
+  loadClients()
+  loadProjects()
+})
+
 const projectsByClient = computed(() => {
   const map = new Map()
-  for (const p of projects) {
-    if (!map.has(p.clientId)) map.set(p.clientId, [])
-    map.get(p.clientId).push(p)
+  for (const p of projects.value) {
+    if (!map.has(p.client_id)) map.set(p.client_id, [])
+    map.get(p.client_id).push(p)
   }
   return map
 })
 
 const rows = computed(() => {
-  let list = clients.map(c => {
+  let list = clients.value.map(c => {
     const projs = projectsByClient.value.get(c.id) || []
     return {
       ...c,
       projectCount: projs.length,
-      lifetime: projs.reduce((sum, p) => sum + p.budget, 0)
+      lifetime: projs.reduce((sum, p) => sum + Number(p.budget || 0), 0)
     }
   })
 
@@ -30,8 +39,8 @@ const rows = computed(() => {
   if (q) {
     list = list.filter(c =>
       c.name.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.languages.some(l => l.toLowerCase().includes(q))
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.language || '').toLowerCase().includes(q)
     )
   }
 
@@ -63,7 +72,7 @@ function sortIndicator(key) {
   return sortDir.value === 1 ? '↑' : '↓'
 }
 
-const selectedClient = computed(() => clients.find(c => c.id === selectedId.value))
+const selectedClient = computed(() => clients.value.find(c => c.id === selectedId.value))
 const selectedProjects = computed(() =>
   selectedId.value ? (projectsByClient.value.get(selectedId.value) || []) : []
 )
@@ -111,7 +120,7 @@ function selectClient(id) {
               Client<span class="sort-ind">{{ sortIndicator('name') }}</span>
             </th>
             <th>Contact</th>
-            <th>Languages</th>
+            <th>Language</th>
             <th @click="toggleSort('projectCount')" :class="{ sorted: sortKey === 'projectCount' }" style="text-align:right;">
               Projects<span class="sort-ind">{{ sortIndicator('projectCount') }}</span>
             </th>
@@ -131,11 +140,11 @@ function selectClient(id) {
               <span class="client-name">{{ c.name }}</span>
             </td>
             <td class="contact">
-              <span class="email">{{ c.email }}</span>
-              <span class="phone">{{ c.phone }}</span>
+              <span class="email">{{ c.email || '—' }}</span>
+              <span class="phone">{{ c.phone || '' }}</span>
             </td>
             <td class="langs">
-              <span v-for="l in c.languages" :key="l" class="lang-tag">{{ l }}</span>
+              <span v-if="c.language" class="lang-tag">{{ c.language }}</span>
             </td>
             <td class="num">{{ c.projectCount }}</td>
             <td class="num">{{ fmt.format(c.lifetime) }}</td>
@@ -153,12 +162,12 @@ function selectClient(id) {
       <h3 class="detail-name">{{ selectedClient.name }}</h3>
 
       <div class="detail-section">
-        <div class="detail-row"><span>Email</span><span>{{ selectedClient.email }}</span></div>
-        <div class="detail-row"><span>Phone</span><span>{{ selectedClient.phone }}</span></div>
+        <div class="detail-row"><span>Email</span><span>{{ selectedClient.email || '—' }}</span></div>
+        <div class="detail-row"><span>Phone</span><span>{{ selectedClient.phone || '—' }}</span></div>
         <div class="detail-row">
-          <span>Languages</span>
+          <span>Language</span>
           <span class="langs-inline">
-            <span v-for="l in selectedClient.languages" :key="l" class="lang-tag">{{ l }}</span>
+            <span v-if="selectedClient.language" class="lang-tag">{{ selectedClient.language }}</span>
           </span>
         </div>
       </div>
@@ -168,7 +177,7 @@ function selectClient(id) {
         <ul class="project-list">
           <li v-for="p in selectedProjects" :key="p.id">
             <span class="proj-name">{{ p.name }}</span>
-            <span class="proj-meta">{{ p.location }} · {{ fmt.format(p.budget) }}</span>
+            <span class="proj-meta">{{ p.location || '—' }} · {{ fmt.format(p.budget) }}</span>
           </li>
           <li v-if="!selectedProjects.length" class="empty-mini">No projects yet</li>
         </ul>

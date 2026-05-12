@@ -1,6 +1,10 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { projects, clients } from '../data.js'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useProjects } from '../composables/useProjects'
+import { useClients } from '../composables/useClients'
+
+const { projects, load: loadProjects } = useProjects()
+const { clients, load: loadClients } = useClients()
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -15,8 +19,12 @@ const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth())
 const selectedDate = ref(null)
 
-const selectedProjectIds = ref(new Set(projects.map(p => p.id)))
+const selectedProjectIds = ref(new Set())
 const filterOpen = ref(false)
+
+watch(projects, (list) => {
+  selectedProjectIds.value = new Set(list.map(p => p.id))
+}, { immediate: true })
 
 function parseDate(s) {
   if (!s) return null
@@ -30,7 +38,7 @@ function ymd(d) {
 }
 
 function clientName(id) {
-  return clients.find(c => c.id === id)?.name || '—'
+  return clients.value.find(c => c.id === id)?.name || '—'
 }
 
 const monthLabel = computed(() => `${MONTH_NAMES[viewMonth.value]} ${viewYear.value}`)
@@ -52,12 +60,12 @@ const grid = computed(() => {
 })
 
 const visibleProjects = computed(() =>
-  projects
-    .filter(p => p.startDate && p.endDate && selectedProjectIds.value.has(p.id))
+  projects.value
+    .filter(p => p.start_date && p.expected_end_date && selectedProjectIds.value.has(p.id))
     .map(p => ({
       ...p,
-      start: parseDate(p.startDate),
-      end: parseDate(p.endDate)
+      start: parseDate(p.start_date),
+      end: parseDate(p.expected_end_date)
     }))
 )
 
@@ -128,7 +136,7 @@ function toggleProject(id) {
 }
 
 function selectAllProjects() {
-  selectedProjectIds.value = new Set(projects.map(p => p.id))
+  selectedProjectIds.value = new Set(projects.value.map(p => p.id))
 }
 
 function clearAllProjects() {
@@ -141,7 +149,11 @@ function closeFilter(e) {
   filterOpen.value = false
 }
 
-onMounted(() => window.addEventListener('click', closeFilter))
+onMounted(() => {
+  loadProjects()
+  loadClients()
+  window.addEventListener('click', closeFilter)
+})
 onBeforeUnmount(() => window.removeEventListener('click', closeFilter))
 
 const monthDeadlines = computed(() => {
@@ -250,7 +262,7 @@ const selectedDateInfo = computed(() =>
             :key="`d-${p.id}`"
             class="event deadline"
             :class="p.status"
-            :title="`Deadline · ${p.name} · ${clientName(p.clientId)}`"
+            :title="`Deadline · ${p.name} · ${clientName(p.client_id)}`"
           >
             <span class="event-icon">⚑</span>
             <span class="event-name">{{ p.name }}</span>
@@ -260,7 +272,7 @@ const selectedDateInfo = computed(() =>
             :key="`s-${p.id}`"
             class="event start"
             :class="p.status"
-            :title="`Kick-off · ${p.name} · ${clientName(p.clientId)}`"
+            :title="`Kick-off · ${p.name} · ${clientName(p.client_id)}`"
           >
             <span class="event-icon">◆</span>
             <span class="event-name">{{ p.name }}</span>
@@ -296,7 +308,7 @@ const selectedDateInfo = computed(() =>
             <span class="dot" :class="`dot-${p.status}`"></span>
             <div class="panel-name">
               {{ p.name }}
-              <span class="panel-meta">{{ clientName(p.clientId) }} · {{ p.location }}</span>
+              <span class="panel-meta">{{ clientName(p.client_id) }} · {{ p.location }}</span>
             </div>
             <span class="panel-amt">{{ fmt.format(p.budget) }}</span>
           </li>
@@ -309,7 +321,7 @@ const selectedDateInfo = computed(() =>
             <span class="dot" :class="`dot-${p.status}`"></span>
             <div class="panel-name">
               {{ p.name }}
-              <span class="panel-meta">{{ clientName(p.clientId) }} · {{ p.location }}</span>
+              <span class="panel-meta">{{ clientName(p.client_id) }} · {{ p.location }}</span>
             </div>
             <span class="panel-amt">{{ fmt.format(p.budget) }}</span>
           </li>
@@ -341,7 +353,7 @@ const selectedDateInfo = computed(() =>
           <span class="dot" :class="`dot-${p.status}`"></span>
           <div class="panel-name">
             {{ p.name }}
-            <span class="panel-meta">{{ clientName(p.clientId) }} · due {{ shortDateFmt.format(p.end) }}</span>
+            <span class="panel-meta">{{ clientName(p.client_id) }} · due {{ shortDateFmt.format(p.end) }}</span>
           </div>
           <span class="panel-amt">{{ fmt.format(p.budget) }}</span>
         </li>

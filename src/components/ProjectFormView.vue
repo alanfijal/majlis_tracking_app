@@ -1,15 +1,19 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { clients, statusOptions, languageOptions, currencyOptions } from '../data.js'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useClients } from '../composables/useClients'
+import { useProjects } from '../composables/useProjects'
+import { statusOptions, languageOptions, currencyOptions } from '../lib/options'
 
-const emit = defineEmits(['cancel', 'save'])
+const router = useRouter()
+const { clients, load: loadClients, createClient } = useClients()
+const { createProject } = useProjects()
 
 const projectName = ref('')
 const location = ref('')
 const budget = ref('')
 const currency = ref('EUR')
 const languages = ref(['EN'])
-const status = ref('new')
 
 function toggleProjectLanguage(code) {
   const list = languages.value
@@ -17,9 +21,13 @@ function toggleProjectLanguage(code) {
   if (idx === -1) list.push(code)
   else if (list.length > 1) list.splice(idx, 1)
 }
+const status = ref('new')
 const startDate = ref('')
 const endDate = ref('')
 const notes = ref('')
+
+const saving = ref(false)
+const saveError = ref(null)
 
 const clientMode = ref('existing')
 const selectedClientId = ref(null)
@@ -30,38 +38,23 @@ const newClient = ref({
   name: '',
   email: '',
   phone: '',
-  languages: ['EN']
+  language: 'EN'
 })
-
-function toggleNewClientLanguage(code) {
-  const list = newClient.value.languages
-  const idx = list.indexOf(code)
-  if (idx === -1) list.push(code)
-  else if (list.length > 1) list.splice(idx, 1)
-}
 
 const filteredClients = computed(() => {
   const q = clientSearch.value.toLowerCase().trim()
-  if (!q) return clients
-  return clients.filter(c => c.name.toLowerCase().includes(q))
+  if (!q) return clients.value
+  return clients.value.filter(c => c.name.toLowerCase().includes(q))
 })
 
 const selectedClient = computed(() =>
-  clients.find(c => c.id === selectedClientId.value)
+  clients.value.find(c => c.id === selectedClientId.value)
 )
-
-const projectLanguageOptions = computed(() => {
-  const codes = clientMode.value === 'existing'
-    ? selectedClient.value?.languages
-    : newClient.value.languages
-  if (!codes || !codes.length) return languageOptions
-  return languageOptions.filter(l => codes.includes(l.value))
-})
 
 function selectClient(client) {
   selectedClientId.value = client.id
   clientSearch.value = client.name
-  if (client.languages?.length) languages.value = [...client.languages]
+  if (client.language) languages.value = [client.language]
   showClientDropdown.value = false
 }
 
@@ -79,7 +72,7 @@ function switchToNewClient() {
 
 function switchToExistingClient() {
   clientMode.value = 'existing'
-  newClient.value = { name: '', email: '', phone: '', languages: ['EN'] }
+  newClient.value = { name: '', email: '', phone: '', language: 'EN' }
 }
 
 function hideDropdownDelayed() {
@@ -93,38 +86,62 @@ const isValid = computed(() => {
   if (clientMode.value === 'existing' && !selectedClientId.value) return false
   if (clientMode.value === 'new') {
     if (!newClient.value.name.trim()) return false
-    if (!newClient.value.languages.length) return false
+    if (!newClient.value.language) return false
   }
   if (!languages.value.length) return false
   return true
 })
 
-function handleSave() {
-  if (!isValid.value) return
+async function handleSave() {
+  if (!isValid.value || saving.value) return
+  saving.value = true
+  saveError.value = null
+  try {
+    let clientId = selectedClientId.value
+    if (clientMode.value === 'new') {
+      const created = await createClient({
+        name: newClient.value.name.trim(),
+        email: newClient.value.email.trim() || null,
+        phone: newClient.value.phone.trim() || null,
+        language: newClient.value.language
+      })
+      clientId = created.id
+    }
 
-  const payload = {
-    name: projectName.value.trim(),
-    location: location.value.trim(),
-    budget: Number(budget.value),
-    currency: currency.value,
-    languages: [...languages.value],
-    status: status.value,
-    startDate: startDate.value || null,
-    endDate: endDate.value || null,
-    notes: notes.value.trim() || null,
-    client: clientMode.value === 'existing'
-      ? { id: selectedClientId.value }
-      : { ...newClient.value, isNew: true }
+    await createProject({
+      client_id: clientId,
+      name: projectName.value.trim(),
+      location: location.value.trim() || null,
+      budget: Number(budget.value),
+      currency: currency.value,
+      language: [...languages.value],
+      status: status.value,
+      start_date: startDate.value || null,
+      expected_end_date: endDate.value || null,
+      notes: notes.value.trim() || null
+    })
+
+    router.push({ name: 'projects' })
+  } catch (e) {
+    saveError.value = e.message || 'Failed to save. Try again.'
+  } finally {
+    saving.value = false
   }
-
-  emit('save', payload)
 }
+
+function handleCancel() {
+  router.push({ name: 'projects' })
+}
+
+onMounted(() => {
+  loadClients()
+})
 </script>
 
 <template>
   <div class="form-shell">
     <div class="form-head">
-      <button class="back" @click="$emit('cancel')">← Back to projects</button>
+      <button class="back" @click="handleCancel">← Back to projects</button>
       <h2 class="form-title">New project</h2>
       <p class="form-sub">Add a new project. Start by linking it to an existing client or creating one.</p>
     </div>
@@ -160,7 +177,7 @@ function handleSave() {
             @mousedown="selectClient(c)"
           >
             <span class="dropdown-name">{{ c.name }}</span>
-            <span class="dropdown-meta">{{ c.languages.join(', ') }} · {{ c.email }}</span>
+            <span class="dropdown-meta">{{ c.language }}{{ c.email ? ' · ' + c.email : '' }}</span>
           </div>
           <div class="dropdown-divider"></div>
           <div class="dropdown-item dropdown-create" @mousedown="switchToNewClient">
@@ -169,9 +186,9 @@ function handleSave() {
         </div>
 
         <div v-if="selectedClient" class="client-card">
-          <div class="client-card-row"><span>Email</span><span>{{ selectedClient.email }}</span></div>
-          <div class="client-card-row"><span>Phone</span><span>{{ selectedClient.phone }}</span></div>
-          <div class="client-card-row"><span>Languages</span><span>{{ selectedClient.languages.join(', ') }}</span></div>
+          <div class="client-card-row"><span>Email</span><span>{{ selectedClient.email || '—' }}</span></div>
+          <div class="client-card-row"><span>Phone</span><span>{{ selectedClient.phone || '—' }}</span></div>
+          <div class="client-card-row"><span>Language</span><span>{{ selectedClient.language }}</span></div>
         </div>
       </div>
 
@@ -191,20 +208,20 @@ function handleSave() {
           </div>
         </div>
         <div class="field">
-          <label class="field-label">Languages spoken</label>
+          <label class="field-label">Preferred language</label>
           <div class="lang-chips">
             <button
               v-for="l in languageOptions"
               :key="l.value"
               type="button"
               class="lang-chip"
-              :class="{ active: newClient.languages.includes(l.value) }"
-              @click="toggleNewClientLanguage(l.value)"
+              :class="{ active: newClient.language === l.value }"
+              @click="newClient.language = l.value"
             >
               {{ l.label }}
             </button>
           </div>
-          <p class="field-hint">Tap to add or remove. At least one language is required.</p>
+          <p class="field-hint">Pick one. This is the client's primary communication language.</p>
         </div>
       </div>
     </section>
@@ -244,7 +261,7 @@ function handleSave() {
           <label class="field-label">Communication languages</label>
           <div class="lang-chips">
             <button
-              v-for="l in projectLanguageOptions"
+              v-for="l in languageOptions"
               :key="l.value"
               type="button"
               class="lang-chip"
@@ -254,7 +271,7 @@ function handleSave() {
               {{ l.label }}
             </button>
           </div>
-          <p class="field-hint">Pick one or more. At least one is required.</p>
+          <p class="field-hint">Tap to add or remove. At least one is required.</p>
         </div>
       </div>
     </section>
@@ -282,9 +299,13 @@ function handleSave() {
       </div>
     </section>
 
+    <p v-if="saveError" class="save-error">{{ saveError }}</p>
+
     <div class="form-actions">
-      <button class="btn-secondary" @click="$emit('cancel')">Cancel</button>
-      <button class="btn-primary" :disabled="!isValid" @click="handleSave">Save project</button>
+      <button class="btn-secondary" :disabled="saving" @click="handleCancel">Cancel</button>
+      <button class="btn-primary" :disabled="!isValid || saving" @click="handleSave">
+        {{ saving ? 'Saving…' : 'Save project' }}
+      </button>
     </div>
   </div>
 </template>
@@ -592,6 +613,14 @@ function handleSave() {
   flex: 1;
 }
 
+.save-error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--m-status-snagg-fg);
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -612,7 +641,7 @@ function handleSave() {
   transition: background 0.15s, color 0.15s;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--m-paper);
   color: var(--m-ink);
 }
@@ -632,7 +661,8 @@ function handleSave() {
   opacity: 0.9;
 }
 
-.btn-primary:disabled {
+.btn-primary:disabled,
+.btn-secondary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }

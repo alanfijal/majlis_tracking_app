@@ -1,8 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { projects, clients, statusOptions } from '../data.js'
+import { ref, computed, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useProjects } from '../composables/useProjects'
+import { statusOptions } from '../lib/options'
 
-defineEmits(['new-project'])
+const router = useRouter()
+const { projects, loading, error, load, updateProject } = useProjects()
 
 const currentFilter = ref('all')
 const searchQuery = ref('')
@@ -32,19 +35,19 @@ const fmt = new Intl.NumberFormat('en-DE', {
   maximumFractionDigits: 0
 })
 
-function clientName(id) {
-  return clients.find(c => c.id === id)?.name || '—'
-}
-
 const counts = computed(() => ({
-  new: projects.filter(p => p.status === 'new').length,
-  sales: projects.filter(p => p.status === 'sales').length,
-  ongoing: projects.filter(p => p.status === 'ongoing').length,
-  snagg: projects.filter(p => p.status === 'snagg').length
+  new: projects.value.filter(p => p.status === 'new').length,
+  sales: projects.value.filter(p => p.status === 'sales').length,
+  ongoing: projects.value.filter(p => p.status === 'ongoing').length,
+  snagg: projects.value.filter(p => p.status === 'snagg').length
 }))
 
 const filteredProjects = computed(() => {
-  let rows = projects.map(p => ({ ...p, clientName: clientName(p.clientId) }))
+  let rows = projects.value.map(p => ({
+    ...p,
+    clientName: p.client?.name || '—',
+    location: p.location || ''
+  }))
 
   if (currentFilter.value !== 'all') {
     rows = rows.filter(p => p.status === currentFilter.value)
@@ -95,10 +98,15 @@ function toggleStatusMenu(id, ev) {
   openStatusMenu.value = id
 }
 
-function setStatus(projectId, value) {
-  const proj = projects.find(p => p.id === projectId)
-  if (proj) proj.status = value
+async function setStatus(projectId, value) {
   openStatusMenu.value = null
+  const proj = projects.value.find(p => p.id === projectId)
+  if (!proj || proj.status === value) return
+  try {
+    await updateProject(projectId, { status: value })
+  } catch (e) {
+    error.value = e
+  }
 }
 
 function closeStatusMenu(e) {
@@ -111,13 +119,26 @@ function handleScroll() {
   openStatusMenu.value = null
 }
 
+function onVisible() {
+  if (document.visibilityState === 'visible') load()
+}
+
+function goNewProject() {
+  router.push({ name: 'project-new' })
+}
+
 onMounted(() => {
+  load()
   window.addEventListener('click', closeStatusMenu)
   window.addEventListener('scroll', handleScroll, true)
+  document.addEventListener('visibilitychange', onVisible)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('click', closeStatusMenu)
   window.removeEventListener('scroll', handleScroll, true)
+})
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisible)
 })
 </script>
 
@@ -152,8 +173,11 @@ onBeforeUnmount(() => {
       {{ f.label }}
     </button>
     <input v-model="searchQuery" class="search" placeholder="Search..." />
-    <button class="add" @click="$emit('new-project')">+ New project</button>
+    <button class="add" @click="goNewProject">+ New project</button>
   </div>
+
+  <p v-if="loading" class="status-line">Loading projects…</p>
+  <p v-if="error" class="status-line error">{{ error.message || 'Failed to load projects.' }}</p>
 
   <div class="table-wrap">
     <table>
@@ -201,16 +225,16 @@ onBeforeUnmount(() => {
           <td>{{ p.clientName }}</td>
           <td>{{ p.location }}</td>
           <td class="budget">{{ fmt.format(p.budget) }}</td>
-          <td class="lang">{{ p.languages.join(' · ') }}</td>
+          <td class="lang">{{ (p.language && p.language.length) ? p.language.join(' · ') : (p.client?.language || '—') }}</td>
         </tr>
-        <tr v-if="!filteredProjects.length">
+        <tr v-if="!filteredProjects.length && !loading">
           <td colspan="5" class="empty">No projects match your filters</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <p class="footer-note">{{ filteredProjects.length }} of {{ projects.length }} projects · Updated today</p>
+  <p class="footer-note">{{ filteredProjects.length }} of {{ projects.length }} projects</p>
 
   <Teleport to="body">
     <div
@@ -337,6 +361,19 @@ onBeforeUnmount(() => {
 
 .add:hover {
   opacity: 0.88;
+}
+
+.status-line {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--m-brass);
+  letter-spacing: 0.04em;
+}
+
+.status-line.error {
+  color: var(--m-status-snagg-fg);
+  font-style: normal;
 }
 
 .table-wrap {

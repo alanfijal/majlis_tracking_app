@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { languageOptions, currencyOptions, statusOptions } from '../data.js'
+import { languageOptions, currencyOptions, statusOptions } from '../lib/options'
 
 const profile = ref({
   studioName: 'The Majlis',

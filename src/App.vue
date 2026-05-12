@@ -1,56 +1,55 @@
 <script setup>
-import { ref } from 'vue'
-import ProjectsView from './components/ProjectsView.vue'
-import ProjectFormView from './components/ProjectFormView.vue'
-import ClientsView from './components/ClientsView.vue'
-import CalendarView from './components/CalendarView.vue'
-import SettingsView from './components/SettingsView.vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { supabase } from './lib/supabase'
 
-const view = ref('projects')
-const showForm = ref(false)
+const route = useRoute()
+const router = useRouter()
+const session = ref(null)
 
-function openForm() {
-  showForm.value = true
-}
+let authSub = null
 
-function closeForm() {
-  showForm.value = false
-}
+onMounted(async () => {
+  const { data } = await supabase.auth.getSession()
+  session.value = data.session
+  const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    session.value = newSession
+  })
+  authSub = sub
+})
 
-function handleSave(project) {
-  console.log('Saved project:', project)
-  closeForm()
-}
+onUnmounted(() => {
+  authSub?.subscription?.unsubscribe()
+})
 
-function setView(v) {
-  view.value = v
-  showForm.value = false
+const showChrome = computed(() => route.name !== 'login' && route.name != null)
+
+async function signOut() {
+  await supabase.auth.signOut()
+  router.push({ name: 'login' })
 }
 </script>
 
 <template>
-  <header class="app-header">
+  <header v-if="showChrome" class="app-header">
     <div>
       <div class="app-sub">Atelier · Marbella</div>
       <h1 class="app-brand">The Majlis</h1>
     </div>
     <nav class="app-nav">
-      <a :class="{ active: view === 'projects' && !showForm }" @click="setView('projects')">Projects</a>
-      <a :class="{ active: view === 'clients' && !showForm }" @click="setView('clients')">Clients</a>
-      <a :class="{ active: view === 'calendar' && !showForm }" @click="setView('calendar')">Calendar</a>
-      <a :class="{ active: view === 'settings' && !showForm }" @click="setView('settings')">Settings</a>
+      <router-link :to="{ name: 'projects' }">Projects</router-link>
+      <router-link :to="{ name: 'clients' }">Clients</router-link>
+      <router-link :to="{ name: 'calendar' }">Calendar</router-link>
+      <router-link :to="{ name: 'settings' }">Settings</router-link>
+      <a v-if="session" class="signout" @click="signOut">Sign out</a>
     </nav>
   </header>
 
   <main>
-    <ProjectFormView v-if="showForm" @cancel="closeForm" @save="handleSave" />
-    <ProjectsView v-else-if="view === 'projects'" @new-project="openForm" />
-    <ClientsView v-else-if="view === 'clients'" />
-    <CalendarView v-else-if="view === 'calendar'" />
-    <SettingsView v-else-if="view === 'settings'" />
+    <router-view />
   </main>
 
-  <footer class="app-footer">
+  <footer v-if="showChrome" class="app-footer">
     Visual POC · The Majlis project tracker
   </footer>
 </template>
@@ -95,9 +94,17 @@ function setView(v) {
   color: var(--m-ink);
 }
 
-.app-nav a.active {
+.app-nav a.router-link-exact-active {
   color: var(--m-ink);
   border-bottom-color: var(--m-brass);
+}
+
+.app-nav a.signout {
+  color: var(--m-ink-3);
+}
+
+.app-nav a.signout:hover {
+  color: var(--m-ink);
 }
 
 .app-footer {
