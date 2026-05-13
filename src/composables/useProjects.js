@@ -45,6 +45,40 @@ async function archiveProject(id) {
   return updateProject(id, { archived: true })
 }
 
+async function restoreProject(id) {
+  return updateProject(id, { archived: false })
+}
+
+async function deleteProject(id) {
+  const { error: err } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id)
+  if (err) throw err
+  await load()
+}
+
+async function loadArchived() {
+  const { data, error: err } = await supabase
+    .from('projects')
+    .select('*, client:clients(*)')
+    .eq('archived', true)
+    .order('updated_at', { ascending: false })
+  if (err) throw err
+  return data || []
+}
+
 export function useProjects() {
-  return { projects, loading, error, load, createProject, updateProject, archiveProject }
+  return {
+    projects,
+    loading,
+    error,
+    load,
+    createProject,
+    updateProject,
+    archiveProject,
+    restoreProject,
+    deleteProject,
+    loadArchived
+  }
 }

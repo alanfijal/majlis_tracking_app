@@ -39,6 +39,7 @@ async function signOut() {
       <router-link :to="{ name: 'projects' }">Projects</router-link>
       <router-link :to="{ name: 'clients' }">Clients</router-link>
       <router-link :to="{ name: 'calendar' }">Calendar</router-link>
+      <router-link :to="{ name: 'archived' }">Archive</router-link>
       <router-link :to="{ name: 'settings' }">Settings</router-link>
       <a v-if="session" class="signout" @click="signOut">Sign out</a>
     </nav>

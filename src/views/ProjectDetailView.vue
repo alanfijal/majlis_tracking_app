@@ -2,13 +2,16 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '../lib/supabase'
+import { useProjects } from '../composables/useProjects'
 
 const router = useRouter()
 const route = useRoute()
+const { archiveProject } = useProjects()
 
 const project = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const archiving = ref(false)
 
 const statusLabels = {
   new: 'New',
@@ -54,6 +57,22 @@ async function load(id) {
 
 onMounted(() => load(route.params.id))
 watch(() => route.params.id, (id) => { if (id) load(id) })
+
+async function archiveCurrent() {
+  if (!project.value || archiving.value) return
+  const ok = window.confirm(
+    `Archive “${project.value.name}”? It will be hidden from the projects list. You can restore or permanently delete it from the Archive.`
+  )
+  if (!ok) return
+  archiving.value = true
+  try {
+    await archiveProject(project.value.id)
+    router.push({ name: 'projects' })
+  } catch (e) {
+    error.value = e
+    archiving.value = false
+  }
+}
 </script>
 
 <template>
@@ -73,6 +92,13 @@ watch(() => route.params.id, (id) => { if (id) load(id) })
           @click="router.push({ name: 'project-edit', params: { id: project.id } })"
         >
           Edit
+        </button>
+        <button
+          class="archive-btn"
+          :disabled="archiving"
+          @click="archiveCurrent"
+        >
+          {{ archiving ? 'Archiving…' : 'Archive' }}
         </button>
       </div>
       <p class="sub">{{ project.location || 'No location' }}</p>
@@ -186,6 +212,30 @@ watch(() => route.params.id, (id) => { if (id) load(id) })
   background: var(--m-ink);
   color: var(--m-paper);
   border-color: var(--m-ink);
+}
+
+.archive-btn {
+  background: transparent;
+  border: 0.5px solid var(--m-line);
+  color: var(--m-ink-3);
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.archive-btn:hover:not(:disabled) {
+  background: var(--m-status-snagg-bg);
+  color: var(--m-status-snagg-fg);
+  border-color: var(--m-status-snagg-bg);
+}
+
+.archive-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .status.new { background: var(--m-status-new-bg); color: var(--m-status-new-fg); }

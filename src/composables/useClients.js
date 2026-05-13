@@ -45,6 +45,40 @@ async function archiveClient(id) {
   return updateClient(id, { archived: true })
 }
 
+async function restoreClient(id) {
+  return updateClient(id, { archived: false })
+}
+
+async function deleteClient(id) {
+  const { error: err } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', id)
+  if (err) throw err
+  await load()
+}
+
+async function loadArchived() {
+  const { data, error: err } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('archived', true)
+    .order('name', { ascending: true })
+  if (err) throw err
+  return data || []
+}
+
 export function useClients() {
-  return { clients, loading, error, load, createClient, updateClient, archiveClient }
+  return {
+    clients,
+    loading,
+    error,
+    load,
+    createClient,
+    updateClient,
+    archiveClient,
+    restoreClient,
+    deleteClient,
+    loadArchived
+  }
 }

@@ -3,13 +3,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useClients } from '../composables/useClients'
 import { useProjects } from '../composables/useProjects'
 
-const { clients, load: loadClients } = useClients()
+const { clients, load: loadClients, archiveClient } = useClients()
 const { projects, load: loadProjects } = useProjects()
 
 const searchQuery = ref('')
 const sortKey = ref('name')
 const sortDir = ref(1)
 const selectedId = ref(null)
+const archiving = ref(false)
+const archiveError = ref(null)
 
 onMounted(() => {
   loadClients()
@@ -78,6 +80,27 @@ const selectedProjects = computed(() =>
 
 function selectClient(id) {
   selectedId.value = selectedId.value === id ? null : id
+  archiveError.value = null
+}
+
+async function archiveSelected() {
+  if (!selectedClient.value || archiving.value) return
+  const projCount = selectedProjects.value.length
+  const msg = projCount
+    ? `Archive “${selectedClient.value.name}”? They still have ${projCount} active project${projCount === 1 ? '' : 's'} — those projects will stay but you can archive them separately.`
+    : `Archive “${selectedClient.value.name}”? They will be hidden from the directory. You can restore or permanently delete from the Archive.`
+  if (!window.confirm(msg)) return
+  archiving.value = true
+  archiveError.value = null
+  try {
+    const id = selectedClient.value.id
+    await archiveClient(id)
+    selectedId.value = null
+  } catch (e) {
+    archiveError.value = e
+  } finally {
+    archiving.value = false
+  }
 }
 </script>
 
@@ -177,6 +200,13 @@ function selectClient(id) {
           </li>
           <li v-if="!selectedProjects.length" class="empty-mini">No projects yet</li>
         </ul>
+      </div>
+
+      <div class="detail-actions">
+        <p v-if="archiveError" class="archive-error">{{ archiveError.message || 'Failed to archive client.' }}</p>
+        <button class="archive-btn" :disabled="archiving" @click="archiveSelected">
+          {{ archiving ? 'Archiving…' : 'Archive client' }}
+        </button>
       </div>
     </aside>
   </div>
@@ -495,5 +525,45 @@ tbody tr.active {
   color: var(--m-ink-3);
   font-style: italic;
   padding: 8px 10px;
+}
+
+.detail-actions {
+  padding-top: 16px;
+  border-top: 0.5px solid var(--m-line-soft);
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.archive-btn {
+  background: transparent;
+  border: 0.5px solid var(--m-line);
+  color: var(--m-ink-3);
+  padding: 9px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.archive-btn:hover:not(:disabled) {
+  background: var(--m-status-snagg-bg);
+  color: var(--m-status-snagg-fg);
+  border-color: var(--m-status-snagg-bg);
+}
+
+.archive-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.archive-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--m-status-snagg-fg);
 }
 </style>

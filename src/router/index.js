@@ -11,6 +11,7 @@ const router = createRouter({
     { path: '/projects/:id', name: 'project-detail', component: () => import('../views/ProjectDetailView.vue') },
     { path: '/clients', name: 'clients', component: () => import('../components/ClientsView.vue') },
     { path: '/calendar', name: 'calendar', component: () => import('../components/CalendarView.vue') },
+    { path: '/archived', name: 'archived', component: () => import('../components/ArchivedView.vue') },
     { path: '/settings', name: 'settings', component: () => import('../components/SettingsView.vue') }
   ]
 })
