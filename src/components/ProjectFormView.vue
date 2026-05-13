@@ -1,13 +1,20 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useClients } from '../composables/useClients'
 import { useProjects } from '../composables/useProjects'
 import { statusOptions, languageOptions, currencyOptions } from '../lib/options'
+import { supabase } from '../lib/supabase'
 
 const router = useRouter()
+const route = useRoute()
 const { clients, load: loadClients, createClient } = useClients()
-const { createProject } = useProjects()
+const { createProject, updateProject } = useProjects()
+
+const editingId = computed(() => route.name === 'project-edit' ? route.params.id : null)
+const isEditing = computed(() => !!editingId.value)
+const loadingProject = ref(false)
+const loadError = ref(null)
 
 const projectName = ref('')
 const location = ref('')
@@ -108,7 +115,7 @@ async function handleSave() {
       clientId = created.id
     }
 
-    await createProject({
+    const payload = {
       client_id: clientId,
       name: projectName.value.trim(),
       location: location.value.trim() || null,
@@ -119,9 +126,15 @@ async function handleSave() {
       start_date: startDate.value || null,
       expected_end_date: endDate.value || null,
       notes: notes.value.trim() || null
-    })
+    }
 
-    router.push({ name: 'projects' })
+    if (isEditing.value) {
+      await updateProject(editingId.value, payload)
+      router.push({ name: 'project-detail', params: { id: editingId.value } })
+    } else {
+      await createProject(payload)
+      router.push({ name: 'projects' })
+    }
   } catch (e) {
     saveError.value = e.message || 'Failed to save. Try again.'
   } finally {
@@ -130,20 +143,63 @@ async function handleSave() {
 }
 
 function handleCancel() {
-  router.push({ name: 'projects' })
+  if (isEditing.value) {
+    router.push({ name: 'project-detail', params: { id: editingId.value } })
+  } else {
+    router.push({ name: 'projects' })
+  }
 }
 
-onMounted(() => {
-  loadClients()
+async function loadProjectForEdit(id) {
+  loadingProject.value = true
+  loadError.value = null
+  const { data, error: err } = await supabase
+    .from('projects')
+    .select('*, client:clients(*)')
+    .eq('id', id)
+    .single()
+  if (err) {
+    loadError.value = err.message || 'Failed to load project.'
+    loadingProject.value = false
+    return
+  }
+  projectName.value = data.name || ''
+  location.value = data.location || ''
+  budget.value = data.budget != null ? String(data.budget) : ''
+  currency.value = data.currency || 'EUR'
+  languages.value = Array.isArray(data.language) && data.language.length ? [...data.language] : ['EN']
+  status.value = data.status || 'new'
+  startDate.value = data.start_date || ''
+  endDate.value = data.expected_end_date || ''
+  notes.value = data.notes || ''
+  if (data.client) {
+    clientMode.value = 'existing'
+    selectedClientId.value = data.client.id
+    clientSearch.value = data.client.name
+  }
+  loadingProject.value = false
+}
+
+onMounted(async () => {
+  await loadClients()
+  if (isEditing.value) {
+    await loadProjectForEdit(editingId.value)
+  }
 })
 </script>
 
 <template>
   <div class="form-shell">
     <div class="form-head">
-      <button class="back" @click="handleCancel">← Back to projects</button>
-      <h2 class="form-title">New project</h2>
-      <p class="form-sub">Add a new project. Start by linking it to an existing client or creating one.</p>
+      <button class="back" @click="handleCancel">
+        {{ isEditing ? '← Back to project' : '← Back to projects' }}
+      </button>
+      <h2 class="form-title">{{ isEditing ? 'Edit project' : 'New project' }}</h2>
+      <p class="form-sub">
+        {{ isEditing ? 'Update the details for this project.' : 'Add a new project. Start by linking it to an existing client or creating one.' }}
+      </p>
+      <p v-if="loadingProject" class="status-line">Loading project…</p>
+      <p v-if="loadError" class="status-line error">{{ loadError }}</p>
     </div>
 
     <section class="form-section">
@@ -304,7 +360,7 @@ onMounted(() => {
     <div class="form-actions">
       <button class="btn-secondary" :disabled="saving" @click="handleCancel">Cancel</button>
       <button class="btn-primary" :disabled="!isValid || saving" @click="handleSave">
-        {{ saving ? 'Saving…' : 'Save project' }}
+        {{ saving ? 'Saving…' : (isEditing ? 'Save changes' : 'Save project') }}
       </button>
     </div>
   </div>
@@ -665,5 +721,18 @@ onMounted(() => {
 .btn-secondary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.status-line {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--m-brass);
+  letter-spacing: 0.04em;
+}
+
+.status-line.error {
+  color: var(--m-status-snagg-fg);
+  font-style: normal;
 }
 </style>

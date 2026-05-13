@@ -68,6 +68,12 @@ watch(() => route.params.id, (id) => { if (id) load(id) })
       <div class="title-row">
         <h2 class="title">{{ project.name }}</h2>
         <span class="status" :class="project.status">{{ statusLabels[project.status] }}</span>
+        <button
+          class="edit-btn"
+          @click="router.push({ name: 'project-edit', params: { id: project.id } })"
+        >
+          Edit
+        </button>
       </div>
       <p class="sub">{{ project.location || 'No location' }}</p>
 
@@ -160,6 +166,26 @@ watch(() => route.params.id, (id) => { if (id) load(id) })
   letter-spacing: 0.04em;
   padding: 3px 10px;
   border-radius: 3px;
+}
+
+.edit-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 0.5px solid var(--m-line);
+  color: var(--m-ink-2);
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.edit-btn:hover {
+  background: var(--m-ink);
+  color: var(--m-paper);
+  border-color: var(--m-ink);
 }
 
 .status.new { background: var(--m-status-new-bg); color: var(--m-status-new-fg); }
