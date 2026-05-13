@@ -32,10 +32,9 @@ async function signOut() {
 
 <template>
   <header v-if="showChrome" class="app-header">
-    <div>
-      <div class="app-sub">Atelier · Marbella</div>
-      <h1 class="app-brand">The Majlis</h1>
-    </div>
+    <router-link :to="{ name: 'projects' }" class="brand-link" aria-label="The Majlis">
+      <img src="/majlis_logo.png" alt="The Majlis" class="brand-logo" />
+    </router-link>
     <nav class="app-nav">
       <router-link :to="{ name: 'projects' }">Projects</router-link>
       <router-link :to="{ name: 'clients' }">Clients</router-link>
@@ -64,16 +63,16 @@ async function signOut() {
   margin-bottom: 28px;
 }
 
-.app-sub {
-  font-size: 11px;
-  color: var(--m-ink-3);
-  letter-spacing: 0.18em;
-  margin-bottom: 6px;
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
-.app-brand {
-  font-size: 32px;
-  letter-spacing: 0.04em;
+.brand-logo {
+  height: 76px;
+  width: auto;
+  display: block;
 }
 
 .app-nav {

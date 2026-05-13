@@ -88,14 +88,7 @@ function hideDropdownDelayed() {
 
 const isValid = computed(() => {
   if (!projectName.value.trim()) return false
-  if (!location.value.trim()) return false
-  if (!budget.value || Number(budget.value) <= 0) return false
-  if (clientMode.value === 'existing' && !selectedClientId.value) return false
-  if (clientMode.value === 'new') {
-    if (!newClient.value.name.trim()) return false
-    if (!newClient.value.language) return false
-  }
-  if (!languages.value.length) return false
+  if (clientMode.value === 'new' && newClient.value.name.trim() && !newClient.value.language) return false
   return true
 })
 
@@ -105,7 +98,7 @@ async function handleSave() {
   saveError.value = null
   try {
     let clientId = selectedClientId.value
-    if (clientMode.value === 'new') {
+    if (clientMode.value === 'new' && newClient.value.name.trim()) {
       const created = await createClient({
         name: newClient.value.name.trim(),
         email: newClient.value.email.trim() || null,
@@ -116,12 +109,12 @@ async function handleSave() {
     }
 
     const payload = {
-      client_id: clientId,
+      client_id: clientId || null,
       name: projectName.value.trim(),
       location: location.value.trim() || null,
-      budget: Number(budget.value),
+      budget: budget.value === '' || budget.value == null ? null : Number(budget.value),
       currency: currency.value,
-      language: [...languages.value],
+      language: languages.value.length ? [...languages.value] : null,
       status: status.value,
       start_date: startDate.value || null,
       expected_end_date: endDate.value || null,
@@ -196,7 +189,7 @@ onMounted(async () => {
       </button>
       <h2 class="form-title">{{ isEditing ? 'Edit project' : 'New project' }}</h2>
       <p class="form-sub">
-        {{ isEditing ? 'Update the details for this project.' : 'Add a new project. Start by linking it to an existing client or creating one.' }}
+        {{ isEditing ? 'Update the details for this project.' : 'Only a project name is required — you can fill in the rest later from the project page.' }}
       </p>
       <p v-if="loadingProject" class="status-line">Loading project…</p>
       <p v-if="loadError" class="status-line error">{{ loadError }}</p>
@@ -327,7 +320,7 @@ onMounted(async () => {
               {{ l.label }}
             </button>
           </div>
-          <p class="field-hint">Tap to add or remove. At least one is required.</p>
+          <p class="field-hint">Tap to add or remove. Optional.</p>
         </div>
       </div>
     </section>

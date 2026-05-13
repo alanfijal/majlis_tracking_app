@@ -61,27 +61,17 @@ const grid = computed(() => {
 
 const visibleProjects = computed(() =>
   projects.value
-    .filter(p => p.start_date && p.expected_end_date && selectedProjectIds.value.has(p.id))
+    .filter(p => p.expected_end_date && selectedProjectIds.value.has(p.id))
     .map(p => ({
       ...p,
-      start: parseDate(p.start_date),
       end: parseDate(p.expected_end_date)
     }))
 )
 
 function dayInfo(d) {
   const time = d.getTime()
-  const deadlines = []
-  const starts = []
-  const continuing = []
-  for (const p of visibleProjects.value) {
-    const sT = p.start.getTime()
-    const eT = p.end.getTime()
-    if (time === eT) deadlines.push(p)
-    else if (time === sT) starts.push(p)
-    else if (time > sT && time < eT) continuing.push(p)
-  }
-  return { deadlines, starts, continuing }
+  const deadlines = visibleProjects.value.filter(p => p.end.getTime() === time)
+  return { deadlines }
 }
 
 function isOtherMonth(d) {
@@ -232,8 +222,6 @@ const selectedDateInfo = computed(() =>
 
   <div class="legend">
     <span class="legend-item"><span class="legend-mark mark-deadline">⚑</span>Deadline</span>
-    <span class="legend-item"><span class="legend-mark mark-start">◆</span>Kick-off</span>
-    <span class="legend-item"><span class="legend-stripe"></span>Active</span>
   </div>
 
   <div class="cal-wrap">
@@ -258,7 +246,7 @@ const selectedDateInfo = computed(() =>
 
         <div class="cell-events">
           <div
-            v-for="p in dayInfo(d).deadlines.slice(0, 2)"
+            v-for="p in dayInfo(d).deadlines.slice(0, 3)"
             :key="`d-${p.id}`"
             class="event deadline"
             :class="p.status"
@@ -267,32 +255,9 @@ const selectedDateInfo = computed(() =>
             <span class="event-icon">⚑</span>
             <span class="event-name">{{ p.name }}</span>
           </div>
-          <div
-            v-for="p in dayInfo(d).starts.slice(0, 2)"
-            :key="`s-${p.id}`"
-            class="event start"
-            :class="p.status"
-            :title="`Kick-off · ${p.name} · ${clientName(p.client_id)}`"
-          >
-            <span class="event-icon">◆</span>
-            <span class="event-name">{{ p.name }}</span>
+          <div v-if="dayInfo(d).deadlines.length > 3" class="more">
+            +{{ dayInfo(d).deadlines.length - 3 }} more
           </div>
-          <div
-            v-if="(dayInfo(d).deadlines.length + dayInfo(d).starts.length) > 4"
-            class="more"
-          >
-            +{{ dayInfo(d).deadlines.length + dayInfo(d).starts.length - 4 }} more
-          </div>
-        </div>
-
-        <div v-if="dayInfo(d).continuing.length" class="stripes">
-          <span
-            v-for="p in dayInfo(d).continuing.slice(0, 5)"
-            :key="`c-${p.id}`"
-            class="stripe"
-            :class="p.status"
-            :title="`Active · ${p.name}`"
-          ></span>
         </div>
       </div>
     </div>
@@ -314,36 +279,11 @@ const selectedDateInfo = computed(() =>
           </li>
         </ul>
       </div>
-      <div v-if="selectedDateInfo.starts.length" class="panel-group">
-        <div class="panel-head">Starts · {{ selectedDateInfo.starts.length }}</div>
-        <ul class="panel-list">
-          <li v-for="p in selectedDateInfo.starts" :key="`ps-${p.id}`">
-            <span class="dot" :class="`dot-${p.status}`"></span>
-            <div class="panel-name">
-              {{ p.name }}
-              <span class="panel-meta">{{ clientName(p.client_id) }} · {{ p.location }}</span>
-            </div>
-            <span class="panel-amt">{{ fmt.format(p.budget) }}</span>
-          </li>
-        </ul>
-      </div>
-      <div v-if="selectedDateInfo.continuing.length" class="panel-group">
-        <div class="panel-head">Active · {{ selectedDateInfo.continuing.length }}</div>
-        <ul class="panel-list muted">
-          <li v-for="p in selectedDateInfo.continuing" :key="`pc-${p.id}`">
-            <span class="dot" :class="`dot-${p.status}`"></span>
-            <div class="panel-name">
-              {{ p.name }}
-              <span class="panel-meta">{{ shortDateFmt.format(p.start) }} → {{ shortDateFmt.format(p.end) }}</span>
-            </div>
-          </li>
-        </ul>
-      </div>
       <p
-        v-if="!selectedDateInfo.deadlines.length && !selectedDateInfo.starts.length && !selectedDateInfo.continuing.length"
+        v-if="!selectedDateInfo.deadlines.length"
         class="panel-empty"
       >
-        Nothing scheduled.
+        No deadlines on this day.
       </p>
     </div>
     <div v-else class="panel">
@@ -541,20 +481,6 @@ const selectedDateInfo = computed(() =>
   color: var(--m-paper);
 }
 
-.legend-mark.mark-start {
-  background: transparent;
-  border: 0.5px solid var(--m-ink);
-  color: var(--m-ink);
-}
-
-.legend-stripe {
-  display: inline-block;
-  width: 16px;
-  height: 3px;
-  background: var(--m-brass-soft);
-  border-radius: 2px;
-}
-
 .cal-wrap {
   background: var(--m-paper);
   border: 0.5px solid var(--m-line-soft);
@@ -616,8 +542,7 @@ const selectedDateInfo = computed(() =>
   opacity: 0.55;
 }
 
-.cell.other-month .event,
-.cell.other-month .stripes {
+.cell.other-month .event {
   opacity: 0.4;
 }
 
@@ -687,41 +612,11 @@ const selectedDateInfo = computed(() =>
 .event.deadline.ongoing { background: var(--m-dot-ongoing); color: var(--m-paper); }
 .event.deadline.snagg { background: var(--m-dot-snagg); color: var(--m-paper); }
 
-.event.start {
-  background: transparent;
-  border: 0.5px solid;
-}
-
-.event.start.new { border-color: var(--m-dot-new); color: var(--m-status-new-fg); }
-.event.start.sales { border-color: var(--m-dot-sales); color: var(--m-status-sales-fg); }
-.event.start.ongoing { border-color: var(--m-dot-ongoing); color: var(--m-status-ongoing-fg); }
-.event.start.snagg { border-color: var(--m-dot-snagg); color: var(--m-status-snagg-fg); }
-
 .more {
   font-size: 10px;
   color: var(--m-ink-3);
   padding-left: 4px;
 }
-
-.stripes {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: auto;
-  padding-top: 4px;
-}
-
-.stripe {
-  display: block;
-  height: 2px;
-  border-radius: 1px;
-  width: 100%;
-}
-
-.stripe.new { background: var(--m-dot-new); }
-.stripe.sales { background: var(--m-dot-sales); }
-.stripe.ongoing { background: var(--m-dot-ongoing); }
-.stripe.snagg { background: var(--m-dot-snagg); }
 
 .below {
   margin-top: 22px;
@@ -780,10 +675,6 @@ const selectedDateInfo = computed(() =>
 
 .panel-list li:first-child {
   border-top: none;
-}
-
-.panel-list.muted li {
-  opacity: 0.75;
 }
 
 .dot {

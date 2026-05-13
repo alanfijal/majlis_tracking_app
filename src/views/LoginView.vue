@@ -33,8 +33,7 @@ async function signIn() {
 <template>
   <div class="login-shell">
     <div class="login-card">
-      <div class="eyebrow">Atelier · Marbella</div>
-      <h1 class="brand">The Majlis</h1>
+      <img src="/majlis_logo.png" alt="The Majlis" class="brand-logo" />
       <p class="subtitle">Project tracker — please sign in</p>
 
       <button class="signin" :disabled="loading" @click="signIn">
@@ -73,12 +72,12 @@ async function signIn() {
   text-transform: uppercase;
 }
 
-.brand {
-  font-family: var(--font-display);
-  font-size: 36px;
-  letter-spacing: 0.04em;
-  margin: 0 0 10px;
-  color: var(--m-ink);
+.brand-logo {
+  display: block;
+  width: 280px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 18px;
 }
 
 .subtitle {

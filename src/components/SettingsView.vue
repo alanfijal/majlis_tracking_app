@@ -10,9 +10,7 @@ const defaults = ref({
 
 const display = ref({
   weekStart: 'monday',
-  dateFormat: 'DD MMM YYYY',
-  notifications: true,
-  compactRows: false
+  dateFormat: 'DD MMM YYYY'
 })
 
 const tabs = [
@@ -95,35 +93,6 @@ const activeTab = ref('defaults')
           </div>
         </div>
 
-        <div class="toggle-row">
-          <div>
-            <div class="toggle-label">Email notifications</div>
-            <div class="toggle-hint">Send updates when a project status changes.</div>
-          </div>
-          <button
-            class="toggle"
-            :class="{ on: display.notifications }"
-            @click="display.notifications = !display.notifications"
-            :aria-pressed="display.notifications"
-          >
-            <span class="toggle-knob"></span>
-          </button>
-        </div>
-
-        <div class="toggle-row">
-          <div>
-            <div class="toggle-label">Compact table rows</div>
-            <div class="toggle-hint">Show more rows at once by reducing row height.</div>
-          </div>
-          <button
-            class="toggle"
-            :class="{ on: display.compactRows }"
-            @click="display.compactRows = !display.compactRows"
-            :aria-pressed="display.compactRows"
-          >
-            <span class="toggle-knob"></span>
-          </button>
-        </div>
       </section>
 
       <div class="actions">
